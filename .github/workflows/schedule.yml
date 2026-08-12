@@ -27,7 +27,7 @@ jobs:
           pip install requests beautifulsoup4
 
       - name: 运行热点抓取
-        run: python crawl_hot.py
+        run: python hot_fetch.py
 
       - name: 提交文件回仓库
         uses: stefanzweifel/git-auto-commit-action@v5
