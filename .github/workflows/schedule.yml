@@ -2,16 +2,16 @@ name: 热点抓取定时任务
 
 on:
   schedule:
-    - cron: '20 7 * * *'   # 北京时间15:20
-    - cron: '20 12 * * *'  # 北京时间20:20
-    - cron: '30 20 * * *'  # 北京时间凌晨4:30
+    - cron: '20 7 * * *'
+    - cron: '20 12 * * *'
+    - cron: '30 20 * * *'
   workflow_dispatch:
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 关键：添加写入权限
+      contents: write
     steps:
       - name: Checkout代码
         uses: actions/checkout@v4
