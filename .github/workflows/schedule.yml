@@ -7,25 +7,35 @@ on:
     - cron: "20 4 * * *"     # UTC 4:20 = 北京时间 12:20
     - cron: "30 12 * * *"    # UTC 12:30 = 北京时间 20:30
   workflow_dispatch:         # 支持手动触发
+
+# ✅ 修复1：全局显式声明写入权限
+permissions:
+  contents: write
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write        # 需要写入权限才能提交文件到仓库
     steps:
+      # ✅ 修复2：升级到适配Node.js 24的v5版本
       - name: 检出代码
-        uses: actions/checkout@v5  # ✅ 从v4升级到v5，适配Node.js 24
+        uses: actions/checkout@v5
+      
+      # ✅ 修复3：升级到适配Node.js 24的v6版本
       - name: 设置Python环境
-        uses: actions/setup-python@v6  # ✅ 从v5升级到v6，适配Node.js 24
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
+      
       - name: 安装依赖
         run: |
           pip install requests beautifulsoup4 schedule
+      
       - name: 运行热点抓取
         run: python hot_fetch.py
+      
+      # ✅ 核心修复：升级到适配Node.js 24的v6版本
       - name: 提交文件回仓库
-        uses: stefanzweifel/git-auto-commit-action@v6  # ✅ 从v5升级到v6，适配Node.js 24
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "自动更新热点数据"
           file_pattern: hot_topics.json
