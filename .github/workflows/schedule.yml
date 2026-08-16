@@ -14,9 +14,9 @@ jobs:
       contents: write        # 需要写入权限才能提交文件到仓库
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5  # ✅ 从v4升级到v5，适配Node.js 24
       - name: 设置Python环境
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6  # ✅ 从v5升级到v6，适配Node.js 24
         with:
           python-version: '3.10'
       - name: 安装依赖
@@ -25,7 +25,7 @@ jobs:
       - name: 运行热点抓取
         run: python hot_fetch.py
       - name: 提交文件回仓库
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v6  # ✅ 从v5升级到v6，适配Node.js 24
         with:
           commit_message: "自动更新热点数据"
           file_pattern: hot_topics.json
