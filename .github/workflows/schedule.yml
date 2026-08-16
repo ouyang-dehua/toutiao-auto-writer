@@ -1,62 +1,56 @@
 name: 热点抓取定时任务
+concurrency:
+  group: "hot-fetch"
+  cancel-in-progress: true
 on:
   schedule:
-    - cron: "20 23 * * *"
-    - cron: "20 4 * * *"
-    - cron: "30 12 * * *"
-  workflow_dispatch:
-
-# 全局显式声明权限
-permissions:
-  contents: write
-
+    # 每天 7:20 / 12:20 / 20:30 运行（北京时间）
+    - cron: "20 23 * * *"    # UTC 23:20 = 北京时间 7:20
+    - cron: "20 4 * * *"     # UTC 4:20 = 北京时间 12:20
+    - cron: "30 12 * * *"    # UTC 12:30 = 北京时间 20:30
+  workflow_dispatch:         # 支持手动触发
 jobs:
   crawl:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
+      # ✅ 修复1：增加fetch-depth: 0，确保获取完整git历史
       - name: 检出代码
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
-          # 确保获取完整git历史，方便提交
           fetch-depth: 0
+          persist-credentials: true
+          ref: main
       
+      # 保持Python环境设置不变
       - name: 设置Python环境
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
       - name: 安装依赖
         run: |
-          pip install requests beautifulsoup4
+          pip install requests beautifulsoup4 schedule
       
       - name: 运行热点抓取
         run: python hot_fetch.py
       
-      # 检查文件是否生成
-      - name: 检查输出文件
+      # ✅ 修复2：新增同步远程分支步骤，解决non-fast-forward问题
+      - name: 同步远程分支
         run: |
-          if [ -f hot_topics.json ]; then
-            echo "✅ 文件生成成功，大小：$(du -h hot_topics.json | cut -f1)"
-          else
-            echo "❌ hot_topics.json 文件不存在！"
-            exit 1
-          fi
-      
-      # 配置git身份（解决常见的身份认证失败问题）
-      - name: 配置Git身份
-        run: |
+          # 配置git身份
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 获取远程最新变更
+          git fetch origin main
+          # 将本地变更重放到远程最新版本之上
+          git rebase origin/main || git pull --rebase --autostash origin main || true
       
+      # 保持自动提交步骤不变
       - name: 提交文件回仓库
-        uses: stefanzweifel/git-auto-commit-action@v6
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "自动更新热点数据"
           file_pattern: hot_topics.json
-          branch: ${{ github.head_ref || github.ref_name }}
-          # 明确指定提交者信息
-          commit_user_name: github-actions[bot]
-          commit_user_email: github-actions[bot]@users.noreply.github.com
-          commit_author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
-          # 跳过脏检查，如果文件没变化也不报错
-          skip_dirty_check: true
+          branch: main
