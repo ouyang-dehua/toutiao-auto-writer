@@ -4,7 +4,6 @@ concurrency:
   cancel-in-progress: true
 on:
   schedule:
-    # 每天 7:20 / 12:20 / 20:30 运行（北京时间）
     - cron: "20 23 * * *"    # UTC 23:20 = 北京时间 7:20
     - cron: "20 4 * * *"     # UTC 4:20 = 北京时间 12:20
     - cron: "30 12 * * *"    # UTC 12:30 = 北京时间 20:30
@@ -13,44 +12,44 @@ jobs:
   crawl:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write        # 确保写入权限开启
     steps:
-      # ✅ 修复1：增加fetch-depth: 0，确保获取完整git历史
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 0          # 拉取完整历史
           persist-credentials: true
           ref: main
-      
-      # 保持Python环境设置不变
+
       - name: 设置Python环境
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
-      
+
       - name: 安装依赖
         run: |
           pip install requests beautifulsoup4 schedule
-      
+
       - name: 运行热点抓取
         run: python hot_fetch.py
-      
-      # ✅ 修复2：新增同步远程分支步骤，解决non-fast-forward问题
+
+      # 同步远程最新代码，自动解决冲突
       - name: 同步远程分支
         run: |
-          # 配置git身份
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # 获取远程最新变更
-          git fetch origin main
-          # 将本地变更重放到远程最新版本之上
-          git rebase origin/main || git pull --rebase --autostash origin main || true
-      
-      # 保持自动提交步骤不变
-      - name: 提交文件回仓库
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "自动更新热点数据"
-          file_pattern: hot_topics.json
-          branch: main
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash origin main
+
+      # ✅ 改用原生Git提交，替代容易出问题的第三方action，流程完全可控
+      - name: 提交并推送到远程
+        run: |
+          # 只更新我们需要的热点文件
+          git add hot_topics.json
+          # 判断是否有变更，没有变更就跳过提交，避免空提交冲突
+          if git diff --staged --quiet; then
+            echo "没有文件变更，跳过提交"
+            exit 0
+          fi
+          # 有变更就提交推送
+          git commit -m "自动更新热点数据 $(date +'%Y-%m-%d %H:%M')"
+          git push origin main
