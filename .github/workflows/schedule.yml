@@ -4,15 +4,25 @@ on:
     # ==========================================
     # 工作日抓取时间（周一至周五 北京时间）
     # ==========================================
+    # 早间6:00 抓取 -> 7:00 发布完成
     - cron: "0 22 * * 1-5"      # UTC 22:00 = 北京时间 6:00
+    
+    # 午间11:00 抓取 -> 12:00 发布完成
     - cron: "0 3 * * 1-5"       # UTC 3:00 = 北京时间 11:00
+    
+    # 晚间17:00 抓取 -> 18:00 发布完成
     - cron: "0 9 * * 1-5"       # UTC 9:00 = 北京时间 17:00
 
     # ==========================================
     # 周末抓取时间（周六、周日 北京时间）
     # ==========================================
+    # 早间8:00 抓取 -> 9:00 发布完成
     - cron: "0 0 * * 6,0"       # UTC 0:00 = 北京时间 8:00
+    
+    # 午间14:00 抓取 -> 15:00 发布完成
     - cron: "0 6 * * 6,0"       # UTC 6:00 = 北京时间 14:00
+    
+    # 晚间17:00 抓取 -> 18:00 发布完成
     - cron: "0 9 * * 6,0"       # UTC 9:00 = 北京时间 17:00
 
   workflow_dispatch:              # 支持手动触发
@@ -23,30 +33,28 @@ jobs:
     permissions:
       contents: write
     steps:
-      # ✅ 使用语义化版本标签，GitHub自动解析到最新兼容版本
+      # ⚠️ 升级到v5，兼容Node.js 24
       - name: 检出代码
-        uses: actions/checkout@v4
-
-      # ✅ 使用语义化版本标签
+        uses: actions/checkout@v5
+        
+      # ⚠️ 升级到v6，兼容Node.js 24
       - name: 设置Python环境
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
-
+          
       - name: 安装依赖
         run: |
           pip install requests beautifulsoup4 schedule
-
+          
       - name: 运行热点抓取
         run: python hot_fetch.py
-
-      # ✅ 使用正确的参数名解决无文件变化问题
+        
+      # ⚠️ 升级到v6，兼容Node.js 24
       - name: 提交文件回仓库
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "自动更新热点数据"
           file_pattern: hot_topics.json
           branch: main
-          # ✅ 正确参数名：skip_dirty_check = true 表示跳过脏检查
-          # 当文件无变化时，不会报错，正常退出
-          skip_dirty_check: true
+          skip_dirty_check: true   # 热点无更新时不报错
