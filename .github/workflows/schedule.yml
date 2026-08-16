@@ -4,6 +4,7 @@ concurrency:
   cancel-in-progress: true
 on:
   schedule:
+    # 每天 7:20 / 12:20 / 20:30 运行（北京时间）
     - cron: "20 23 * * *"    # UTC 23:20 = 北京时间 7:20
     - cron: "20 4 * * *"     # UTC 4:20 = 北京时间 12:20
     - cron: "30 12 * * *"    # UTC 12:30 = 北京时间 20:30
@@ -12,12 +13,12 @@ jobs:
   crawl:
     runs-on: ubuntu-latest
     permissions:
-      contents: write        # 确保写入权限开启
+      contents: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0          # 拉取完整历史
+          fetch-depth: 0          # 拉取完整Git历史，满足rebase要求
           persist-credentials: true
           ref: main
 
@@ -33,23 +34,27 @@ jobs:
       - name: 运行热点抓取
         run: python hot_fetch.py
 
-      # 同步远程最新代码，自动解决冲突
-      - name: 同步远程分支
+      # 👇 核心修复：按照GitHub要求配置Git+同步远程分支+Token认证
+      - name: 配置Git并同步远程分支
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 配置提交用户身份
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase --autostash origin main
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 修改远程地址，带上Token认证，解决推送权限和认证问题
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+          # 拉取远程最新变更，rebase本地修改到最新远程之上，解决non-fast-forward
+          git fetch origin ${{ github.ref_name }}
+          git pull --rebase origin ${{ github.ref_name }} || true
 
-      # ✅ 改用原生Git提交，替代容易出问题的第三方action，流程完全可控
-      - name: 提交并推送到远程
-        run: |
-          # 只更新我们需要的热点文件
-          git add hot_topics.json
-          # 判断是否有变更，没有变更就跳过提交，避免空提交冲突
-          if git diff --staged --quiet; then
-            echo "没有文件变更，跳过提交"
-            exit 0
-          fi
-          # 有变更就提交推送
-          git commit -m "自动更新热点数据 $(date +'%Y-%m-%d %H:%M')"
-          git push origin main
+      # 👇 增加Token环境变量，适配最新推送要求
+      - name: 提交文件回仓库
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          commit_message: "自动更新热点数据"
+          file_pattern: hot_topics.json
+          branch: ${{ github.ref_name }}
+          push: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
