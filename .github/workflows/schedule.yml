@@ -4,16 +4,16 @@ on:
     # ==========================================
     # 工作日抓取时间（周一至周五 北京时间）
     # ==========================================
-    - cron: "0 22 * * 1-5"      # 早间6:00 抓取
-    - cron: "0 3 * * 1-5"       # 午间11:00 抓取
-    - cron: "0 9 * * 1-5"       # 晚间17:00 抓取
+    - cron: "0 22 * * 1-5"      # UTC 22:00 = 北京时间 6:00
+    - cron: "0 3 * * 1-5"       # UTC 3:00 = 北京时间 11:00
+    - cron: "0 9 * * 1-5"       # UTC 9:00 = 北京时间 17:00
 
     # ==========================================
     # 周末抓取时间（周六、周日 北京时间）
     # ==========================================
-    - cron: "0 0 * * 6,0"       # 早间8:00 抓取
-    - cron: "0 6 * * 6,0"       # 午间14:00 抓取
-    - cron: "0 9 * * 6,0"       # 晚间17:00 抓取
+    - cron: "0 0 * * 6,0"       # UTC 0:00 = 北京时间 8:00
+    - cron: "0 6 * * 6,0"       # UTC 6:00 = 北京时间 14:00
+    - cron: "0 9 * * 6,0"       # UTC 9:00 = 北京时间 17:00
 
   workflow_dispatch:              # 支持手动触发
 
@@ -23,32 +23,30 @@ jobs:
     permissions:
       contents: write
     steps:
-      # ⚠️ 使用v4.2.0+（最新v4.x，已兼容Node.js 24）
+      # ✅ 使用语义化版本标签，GitHub自动解析到最新兼容版本
       - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          # 强制使用最新代码
-          ref: main
-          
-      # ⚠️ 使用v5.4.0+（最新v5.x，已兼容Node.js 24）
+
+      # ✅ 使用语义化版本标签
       - name: 设置Python环境
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          # 指定Node.js 24环境
-          cache: 'pip'
-          
+
       - name: 安装依赖
         run: |
           pip install requests beautifulsoup4 schedule
-          
+
       - name: 运行热点抓取
         run: python hot_fetch.py
-        
-      # ⚠️ 使用v5.1.0+（最新v5.x，已兼容Node.js 24）
+
+      # ✅ 使用正确的参数名解决无文件变化问题
       - name: 提交文件回仓库
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "自动更新热点数据"
           file_pattern: hot_topics.json
           branch: main
+          # ✅ 正确参数名：skip_dirty_check = true 表示跳过脏检查
+          # 当文件无变化时，不会报错，正常退出
+          skip_dirty_check: true
