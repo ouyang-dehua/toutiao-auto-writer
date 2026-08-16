@@ -4,55 +4,62 @@ on:
     # ==========================================
     # 工作日抓取时间（周一至周五 北京时间）
     # ==========================================
+    # 早间6:00 抓取 -> 7:00 发布完成
+    # UTC 22:00 = 北京时间 6:00
     - cron: "0 22 * * 1-5"      # 周一至周五 6:00
+    
+    # 午间11:00 抓取 -> 12:00 发布完成
+    # UTC 3:00 = 北京时间 11:00
     - cron: "0 3 * * 1-5"       # 周一至周五 11:00
+    
+    # 晚间17:00 抓取 -> 18:00 发布完成
+    # UTC 9:00 = 北京时间 17:00
     - cron: "0 9 * * 1-5"       # 周一至周五 17:00
 
     # ==========================================
     # 周末抓取时间（周六、周日 北京时间）
     # ==========================================
+    # 早间8:00 抓取 -> 9:00 发布完成
+    # UTC 0:00 = 北京时间 8:00
     - cron: "0 0 * * 6,0"       # 周六、周日 8:00
+    
+    # 午间14:00 抓取 -> 15:00 发布完成
+    # UTC 6:00 = 北京时间 14:00
     - cron: "0 6 * * 6,0"       # 周六、周日 14:00
+    
+    # 晚间17:00 抓取 -> 18:00 发布完成
+    # UTC 9:00 = 北京时间 17:00
     - cron: "0 9 * * 6,0"       # 周六、周日 17:00
 
-  workflow_dispatch:
+  workflow_dispatch:              # 支持手动触发
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write             # 需要写入权限才能提交文件到仓库
     steps:
-      # 🔧 核心修复：使用兼容Node.js 24的checkout@v4（更新至最新main分支）
+      # ⚠️ 保持使用v4，这是官方最新稳定版
       - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          # 强制使用最新Node.js 24兼容版本
-          ref: main
-
-      # 🔧 核心修复：显式指定Node.js版本为24，避免环境不兼容
-      - name: 设置Node.js环境
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
+        
+      # ⚠️ 保持使用v5，这是官方最新稳定版
       - name: 设置Python环境
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
+          
       - name: 安装依赖
         run: |
           pip install requests beautifulsoup4 schedule
-
+          
       - name: 运行热点抓取
         run: python hot_fetch.py
-
+        
+      # ⚠️ 保持使用v5，这是官方最新稳定版
       - name: 提交文件回仓库
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "自动更新热点数据"
           file_pattern: hot_topics.json
           branch: main
-          # 添加重试机制，避免临时性网络问题
-          skip_dirty_check: false
